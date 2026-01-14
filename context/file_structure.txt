@@ -1,0 +1,22 @@
+simple-ai-chatbot/
+│
+├── app.py                  # Main Flask application
+├── chatbot/
+│   ├── __init__.py
+│   ├── rules.py             # Keyword-based responses
+│   ├── nlp.py               # Simple NLP logic (NLTK/spaCy)
+│   └── engine.py            # Response decision logic
+│
+├── templates/
+│   └── index.html           # Web chat UI
+│
+├── static/
+│   ├── css/
+│   │   └── style.css        # Chat UI styling
+│   └── js/
+│       └── chat.js          # Frontend logic (fetch API)
+│
+├── requirements.txt         # Python dependencies
+├── Procfile                 # For free deployment (Render)
+├── README.md                # Project explanation
+└── .gitignore               # Ignore venv, cache, etc.
