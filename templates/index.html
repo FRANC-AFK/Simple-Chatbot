@@ -8,13 +8,31 @@
 <body>
   <div class="chat-container">
     <h2>Simple AI Chatbot</h2>
+    
+    <!-- Scope Display -->
+    <div class="scope-banner">
+      <p>💡 I can help with: <strong>Hours</strong> • <strong>Pricing</strong> • <strong>Contact</strong> • <strong>Location</strong></p>
+    </div>
+    
     <div id="chat-box"></div>
 
+    <!-- Quick Action Buttons -->
+    <div class="quick-actions">
+      <button onclick="sendTemplateMessage('When are you open?')">📅 When Open?</button>
+      <button onclick="sendTemplateMessage('How much does it cost?')">💰 How Much?</button>
+      <button onclick="sendTemplateMessage('Where are you located?')">🌍 Where?</button>
+      <button onclick="sendTemplateMessage('How can I contact you?')">📧 Contact</button>
+    </div>
+
+    <!-- Text Input Area -->
     <div class="input-area">
-      <button onclick="sendTemplateMessage('What time do you open?')">Hours</button>
-      <button onclick="sendTemplateMessage('How much does it cost?')">Price</button>
-      <button onclick="sendTemplateMessage('Where are you located?')">Location</button>
-      <button onclick="sendTemplateMessage('How can I contact support?')">Contact</button>
+      <input 
+        type="text" 
+        id="user-input" 
+        placeholder="Ask me anything..."
+        onkeypress="handleKeyPress(event)"
+      />
+      <button onclick="sendUserMessage()" class="send-btn">Send</button>
     </div>
   </div>
 

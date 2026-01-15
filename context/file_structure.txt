@@ -2,6 +2,11 @@ simple-ai-chatbot/
 │
 ├── app.py                  # Main Flask application
 ├── chatbot/
+        ├── ai/
+        ├── __init__.py
+        ├── hf_client.py      # Hugging Face API wrapper
+        ├── prompts.py        # Prompt templates
+        └── generator.py      # Controlled response generation
 │   ├── __init__.py
 │   ├── rules.py             # Keyword-based responses
 │   ├── nlp.py               # Simple NLP logic (NLTK/spaCy)
