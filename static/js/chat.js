@@ -8,6 +8,7 @@ function appendMessage(sender, text, type = null) {
     const badges = {
       "ai": { emoji: "✨", label: "AI-Enhanced", color: "#17a2b8" },
       "rule": { emoji: "✓", label: "Verified", color: "#28a745" },
+      "cached": { emoji: "⚡", label: "Cached", color: "#6610f2" },
       "fallback": { emoji: "⚠️", label: "Limited", color: "#ffc107" }
     };
     
@@ -35,27 +36,56 @@ function removeLoading() {
   if (loader) loader.remove();
 }
 
-function sendTemplateMessage(message) {
+async function sendTemplateMessage(message, retries = 2) {
   appendMessage("user", message);
   showLoading();
 
-  fetch("/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
-  })
-    .then(res => res.json())
-    .then(data => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        removeLoading();
+        appendMessage("bot", "⏱️ Please wait a moment before sending another message.", "fallback");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
       removeLoading();
       appendMessage("bot", data.reply, data.type);
-    })
-    .catch(() => {
-      removeLoading();
-      appendMessage("bot", "Error connecting to server.", "fallback");
-    });
+      return;
+
+    } catch (error) {
+      console.error(`Attempt ${attempt + 1} failed:`, error);
+      
+      if (attempt === retries) {
+        removeLoading();
+        appendMessage("bot", "❌ Connection error. Please try again.", "fallback");
+      } else {
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
 }
 
-function sendUserMessage() {
+function sendUserMessage(event) {
+  if (event) event.preventDefault();
+  
   const input = document.getElementById("user-input");
   const message = input.value.trim();
   
@@ -63,12 +93,6 @@ function sendUserMessage() {
   
   input.value = "";
   sendTemplateMessage(message);
-}
-
-function handleKeyPress(event) {
-  if (event.key === "Enter") {
-    sendUserMessage();
-  }
 }
 
 // Debug: Check HuggingFace status on page load

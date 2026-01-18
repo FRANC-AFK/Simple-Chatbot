@@ -1,8 +1,8 @@
 from chatbot.rules import RULES
 from chatbot.nlp import normalize
 from chatbot.ai.generator import generate_ai_response
-
-USE_AI = True  # master switch
+from chatbot.cache import response_cache
+from config import config
 
 def get_response(message: str) -> dict:
     """
@@ -11,9 +11,18 @@ def get_response(message: str) -> dict:
     Returns:
         dict: {
             "reply": str,
-            "type": "rule" | "ai" | "fallback"
+            "type": "rule" | "ai" | "fallback" | "cached"
         }
     """
+    # Check cache first
+    if config.ENABLE_CACHE:
+        cached = response_cache.get(message)
+        if cached:
+            return {
+                "reply": cached,
+                "type": "cached"
+            }
+    
     words = normalize(message)
 
     best_match = None
@@ -28,8 +37,13 @@ def get_response(message: str) -> dict:
     if best_match and highest_score > 0:
         base_response = best_match["response"]
 
-        if USE_AI:
+        if config.USE_AI:
             reply, response_type = generate_ai_response(base_response)
+            
+            # Cache successful AI responses
+            if config.ENABLE_CACHE and response_type == "ai":
+                response_cache.set(message, reply)
+            
             return {
                 "reply": reply,
                 "type": response_type  # "ai" or "rule" (fallback)
@@ -40,7 +54,8 @@ def get_response(message: str) -> dict:
             "type": "rule"
         }
 
+    fallback = "Sorry, I can only help with specific inquiries like hours, pricing, contact details, or location."
     return {
-        "reply": "Sorry, I can only help with specific inquiries like hours, pricing, contact details, or location.",
+        "reply": fallback,
         "type": "fallback"
     }

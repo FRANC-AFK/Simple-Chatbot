@@ -2,4 +2,5 @@ flask
 gunicorn
 nltk
 requests
-huggingface_hub
+pytest
+pytest-cov

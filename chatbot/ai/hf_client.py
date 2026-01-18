@@ -1,13 +1,12 @@
-import os
-import traceback
-from huggingface_hub import InferenceClient
+import requests
+from chatbot.logger import setup_logger
+from config import config
 
-HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-HF_MODEL = "google/flan-t5-base"
+logger = setup_logger(__name__)
 
 def call_huggingface(prompt: str, max_tokens: int = 64) -> str:
     """
-    Call HuggingFace model using the modern InferenceClient.
+    Call HuggingFace model using the new router chat completions API.
     
     Args:
         prompt: The prompt to send to the model
@@ -16,28 +15,50 @@ def call_huggingface(prompt: str, max_tokens: int = 64) -> str:
     Returns:
         Generated text from the model
     """
-    if not HF_API_TOKEN:
+    if not config.HF_API_TOKEN:
+        logger.error("HF_API_TOKEN is not set")
         raise RuntimeError("HF_API_TOKEN is not set")
 
     try:
-        client = InferenceClient(api_key=HF_API_TOKEN)
+        # Use the new router endpoint with chat completions format
+        API_URL = "https://router.huggingface.co/v1/chat/completions"
         
-        # text_generation returns a TextGenerationResponse object
-        response = client.text_generation(
-            model=HF_MODEL,
-            prompt=prompt,
-            max_new_tokens=max_tokens,
-            temperature=0.3
-        )
+        headers = {
+            "Authorization": f"Bearer {config.HF_API_TOKEN}",
+            "Content-Type": "application/json"
+        }
         
-        # Convert response to string if needed
-        if hasattr(response, 'generated_text'):
-            return response.generated_text
-        else:
-            return str(response)
+        # Chat completions format
+        payload = {
+            "model": "meta-llama/Llama-3.2-1B-Instruct:fastest",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7
+        }
+        
+        logger.info(f"Calling HF API with prompt length: {len(prompt)}")
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=config.AI_TIMEOUT)
+        
+        if response.status_code != 200:
+            logger.error(f"API Error ({response.status_code}): {response.text}")
+            raise RuntimeError(f"API Error ({response.status_code}): {response.text}")
+        
+        result = response.json()
+        
+        # Extract message content from chat completions response
+        if "choices" in result and len(result["choices"]) > 0:
+            message = result["choices"][0].get("message", {})
+            content = message.get("content", "")
+            logger.info(f"Successfully generated response: {len(content)} chars")
+            return content
+        
+        return str(result)
             
     except Exception as e:
-        error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"HF Error: {error_msg}")
-        print(traceback.format_exc())
-        raise RuntimeError(error_msg)
+        logger.error(f"HF Error: {type(e).__name__}: {str(e)}")
+        raise RuntimeError(f"{type(e).__name__}: {str(e)}")
